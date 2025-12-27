@@ -1,0 +1,8 @@
+{
+  "name": "Fluxo Real - Plataforma de Performance",
+  "description": "Diário de trading de alta performance e plataforma de análise comportamental com insights baseados em IA.",
+  "requestFramePermissions": [
+    "camera",
+    "microphone"
+  ]
+}
