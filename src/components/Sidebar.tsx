@@ -104,7 +104,7 @@ const Sidebar: React.FC<SidebarProps> = ({ isOpen, onClose, userRole, onLogout }
             </div>
 
             <button
-              onClick={() => window.location.reload()}
+              onClick={onLogout}
               className="flex items-center gap-4 w-full px-5 py-4 mt-6 text-text-dim hover:text-danger transition-colors font-bold text-sm"
             >
               <span className="material-symbols-outlined">logout</span>
