@@ -20,7 +20,14 @@ export default async function handler(req: Request) {
     }
 
     try {
-        const { message, threadId, assistantId } = await req.json();
+        const body = await req.json();
+        const { message, threadId, assistantId } = body;
+
+        console.log('OpenAI Proxy Request:', {
+            hasMessage: !!message,
+            threadId,
+            hasAssistantId: !!assistantId
+        });
 
         // Initialize Supabase on the Edge
         const supabaseUrl = process.env.SUPABASE_URL || process.env.VITE_SUPABASE_URL;
@@ -28,7 +35,7 @@ export default async function handler(req: Request) {
 
         if (!supabaseUrl || !supabaseKey) {
             return new Response(JSON.stringify({
-                error: 'Faltam chaves de bootstrap do Supabase na Vercel (SUPABASE_URL e SUPABASE_ANON_KEY).'
+                error: 'Faltam chaves do Supabase na Vercel (SUPABASE_URL e SUPABASE_ANON_KEY).'
             }), { status: 500 });
         }
 
@@ -42,17 +49,25 @@ export default async function handler(req: Request) {
         const finalAssistantId = assistantId || dbAssistantId || process.env.OPENAI_ASSISTANT_ID || '';
 
         if (!apiKey) {
-            return new Response(JSON.stringify({ error: 'OpenAI API Key not configured on server or database' }), { status: 500 });
+            return new Response(JSON.stringify({ error: 'OpenAI API Key não configurada (Database ou Vercel).' }), { status: 500 });
+        }
+
+        if (!finalAssistantId) {
+            return new Response(JSON.stringify({ error: 'OpenAI Assistant ID não configurado. Adicione no Painel Admin.' }), { status: 500 });
         }
 
         const openai = new OpenAI({ apiKey });
 
-        // 1. Create thread if not exists
-        let activeThreadId = threadId;
+        // 1. Validar e Criar thread se necessário
+        let activeThreadId = (threadId && threadId !== "undefined" && threadId !== "null") ? threadId : null;
+
         if (!activeThreadId) {
+            console.log('Criando nova Thread OpenAI...');
             const thread = await openai.beta.threads.create();
             activeThreadId = thread.id;
         }
+
+        console.log('Usando Thread:', activeThreadId);
 
         // 2. Add message
         await openai.beta.threads.messages.create(activeThreadId, {
@@ -61,15 +76,23 @@ export default async function handler(req: Request) {
         });
 
         // 3. Run assistant
+        console.log('Iniciando Run para Assistant:', finalAssistantId);
         const run = await openai.beta.threads.runs.create(activeThreadId, {
             assistant_id: finalAssistantId,
         });
 
+        if (!run || !run.id) {
+            throw new Error('Falha ao criar Run no OpenAI.');
+        }
+
         // 4. Poll for completion
         let runStatus = await (openai.beta.threads.runs.retrieve as any)(activeThreadId, run.id);
-        while (runStatus.status === 'queued' || runStatus.status === 'in_progress') {
+        let attempts = 0;
+
+        while ((runStatus.status === 'queued' || runStatus.status === 'in_progress') && attempts < 30) {
             await new Promise(resolve => setTimeout(resolve, 1000));
             runStatus = await (openai.beta.threads.runs.retrieve as any)(activeThreadId, run.id);
+            attempts++;
         }
 
         if (runStatus.status === 'completed') {
@@ -86,7 +109,7 @@ export default async function handler(req: Request) {
             });
         }
 
-        return new Response(JSON.stringify({ error: `Run failed with status: ${runStatus.status}` }), { status: 500 });
+        return new Response(JSON.stringify({ error: `IA falhou ou demorou muito. Status: ${runStatus.status}` }), { status: 500 });
 
     } catch (error: any) {
         console.error('OpenAI Proxy Error:', error);
