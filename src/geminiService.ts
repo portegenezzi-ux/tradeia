@@ -1,21 +1,4 @@
-
-import { GoogleGenAI } from "@google/genai";
 import { Trade } from "./types";
-
-let aiInstance: any = null;
-
-function getAI() {
-  if (aiInstance) return aiInstance;
-  const apiKey = process.env.API_KEY || (process.env as any).GEMINI_API_KEY || '';
-  if (!apiKey) return null;
-  try {
-    aiInstance = new GoogleGenAI({ apiKey });
-    return aiInstance;
-  } catch (e) {
-    console.error("Erro ao inicializar GoogleGenAI:", e);
-    return null;
-  }
-}
 
 export async function getTradeInsight(trade: Trade) {
   try {
@@ -35,22 +18,21 @@ export async function getTradeInsight(trade: Trade) {
       Foque em disciplina, precisão técnica e melhorias psicológicas. RESPONDA EM PORTUGUÊS BRASILEIRO.
     `;
 
-    const ai = getAI();
-    if (!ai) {
-      return "Configuração de IA (Gemini) indisponível. Verifique suas chaves.";
-    }
-
-    const response = await ai.models.generateContent({
-      model: 'gemini-3-flash-preview',
-      contents: prompt,
-      config: {
-        thinkingConfig: { thinkingBudget: 0 }
-      }
+    const response = await fetch('/api/gemini', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ prompt })
     });
 
-    return response.text || "Continue focado em seu plano de trading. Disciplina é o caminho para a consistência.";
+    if (!response.ok) {
+      const error = await response.json();
+      throw new Error(error.error || 'Erro na comunicação com Gemini');
+    }
+
+    const data = await response.json();
+    return data.text || "Continue focado em seu plano de trading. Disciplina é o caminho para a consistência.";
   } catch (error) {
-    console.error("AI Insight Error:", error);
+    console.error("AI Insight Proxy Error:", error);
     return "Não foi possível gerar um insight de IA no momento. Revise seus parâmetros de risco.";
   }
 }

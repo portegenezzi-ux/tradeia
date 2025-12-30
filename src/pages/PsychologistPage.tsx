@@ -1,7 +1,6 @@
 
 import React, { useState, useRef, useEffect } from 'react';
 import { generateAssistantInsight } from '../openaiService';
-import { GoogleGenAI, GenerateContentResponse } from "@google/genai";
 
 interface Message {
   role: 'user' | 'model';
@@ -16,9 +15,8 @@ const PsychologistPage: React.FC = () => {
   const [isLoading, setIsLoading] = useState(false);
   const scrollRef = useRef<HTMLDivElement>(null);
 
-  // Verifica se existe Assistente ID configurado
+  // Assistant ID is still useful for the proxy if multiple assistants exist, but keys are now server-side.
   const assistantId = localStorage.getItem('OPENAI_ASSISTANT_ID');
-  const openaiKey = localStorage.getItem('OPENAI_API_KEY');
 
   useEffect(() => {
     if (scrollRef.current) {
@@ -35,43 +33,12 @@ const PsychologistPage: React.FC = () => {
     setIsLoading(true);
 
     try {
-      if (openaiKey && assistantId) {
-        // Usa a OpenAI Assistant API conforme solicitado
-        const response = await generateAssistantInsight(input);
-        setMessages(prev => [...prev, { role: 'model', text: response }]);
-      } else {
-        // Fallback para Gemini caso OpenAI não esteja configurado
-        const ai = new GoogleGenAI({ apiKey: (process.env as any).GEMINI_API_KEY || (process.env as any).API_KEY });
-        const chat = ai.chats.create({
-          model: 'gemini-3-flash-preview',
-          config: {
-            systemInstruction: `Você é um psicólogo especialista em trading de alta performance da plataforma Fluxo Real. 
-            Seu objetivo é ajudar traders a lidar com ansiedade, FOMO, overtrading, e a manter a disciplina. 
-            Use os conceitos de Mark Douglas e Jared Tendler.
-            Responda sempre em Português do Brasil de forma concisa e direta.`,
-          },
-        });
-
-        const responseStream = await chat.sendMessageStream({ message: input });
-
-        let fullResponse = "";
-        setMessages(prev => [...prev, { role: 'model', text: '' }]);
-
-        for await (const chunk of responseStream) {
-          const chunkText = (chunk as GenerateContentResponse).text;
-          if (chunkText) {
-            fullResponse += chunkText;
-            setMessages(prev => {
-              const last = prev[prev.length - 1];
-              const others = prev.slice(0, -1);
-              return [...others, { ...last, text: fullResponse }];
-            });
-          }
-        }
-      }
+      // Chama o serviço que agora abstrai se usa OpenAI ou Gemini via Proxy
+      const response = await generateAssistantInsight(input);
+      setMessages(prev => [...prev, { role: 'model', text: response }]);
     } catch (error: any) {
       console.error("Erro no chat do Psicólogo IA:", error);
-      setMessages(prev => [...prev, { role: 'model', text: `Desculpe, tive um problema na conexão: ${error.message}. Verifique suas chaves no painel Admin.` }]);
+      setMessages(prev => [...prev, { role: 'model', text: `Desculpe, tive um problema na conexão: ${error.message}. Verifique se as chaves estão configuradas no painel da Vercel.` }]);
     } finally {
       setIsLoading(false);
     }

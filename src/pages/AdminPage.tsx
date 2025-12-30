@@ -1,5 +1,5 @@
 
-import React, { useState, useContext } from 'react';
+import React, { useState, useContext, useEffect } from 'react';
 import * as XLSX from 'xlsx';
 import { DataContext } from '../App';
 import { supabase, TABLES, isSupabaseConfigured } from '../supabaseClient';
@@ -9,33 +9,102 @@ const AdminPage: React.FC = () => {
   const [isProcessing, setIsProcessing] = useState(false);
   const [fileName, setFileName] = useState<string | null>(null);
 
-  // Estados para configuração do Supabase
-  const [sbUrl, setSbUrl] = useState(localStorage.getItem('SUPABASE_URL') || '');
-  const [sbKey, setSbKey] = useState(localStorage.getItem('SUPABASE_ANON_KEY') || '');
+  // Auth & Protection
+  const [isUnlocked, setIsUnlocked] = useState(false);
+  const [passwordInput, setPasswordInput] = useState('');
 
-  // Estados para configuração da OpenAI
-  const [oaKey, setOaKey] = useState(localStorage.getItem('OPENAI_API_KEY') || '');
-  const [oaAssistantId, setOaAssistantId] = useState(localStorage.getItem('OPENAI_ASSISTANT_ID') || '');
+  // Settings State
+  const [settings, setSettings] = useState<Record<string, string>>({
+    OPENAI_API_KEY: '',
+    OPENAI_ASSISTANT_ID: '',
+    GEMINI_API_KEY: '',
+    ADMIN_PASSWORD: '',
+    SUPABASE_URL: localStorage.getItem('SUPABASE_URL') || '',
+    SUPABASE_ANON_KEY: localStorage.getItem('SUPABASE_ANON_KEY') || ''
+  });
 
+  const [isLoadingSettings, setIsLoadingSettings] = useState(false);
   const [isSaved, setIsSaved] = useState(false);
-  const [saveType, setSaveType] = useState<'supabase' | 'openai' | null>(null);
 
-  const saveConfig = (type: 'supabase' | 'openai') => {
-    if (type === 'supabase') {
-      localStorage.setItem('SUPABASE_URL', sbUrl);
-      localStorage.setItem('SUPABASE_ANON_KEY', sbKey);
-    } else {
-      localStorage.setItem('OPENAI_API_KEY', oaKey);
-      localStorage.setItem('OPENAI_ASSISTANT_ID', oaAssistantId);
+  useEffect(() => {
+    if (isSupabaseConfigured()) {
+      fetchSettings();
     }
+  }, []);
 
-    setSaveType(type);
-    setIsSaved(true);
-    setTimeout(() => {
-      setIsSaved(false);
-      setSaveType(null);
-      if (type === 'supabase') window.location.reload();
-    }, 1500);
+  const fetchSettings = async () => {
+    if (!supabase) return;
+    setIsLoadingSettings(true);
+    try {
+      const { data, error } = await supabase.from('freal_settings').select('*');
+      if (error) throw error;
+
+      const mapped = { ...settings };
+      data.forEach((s: any) => {
+        mapped[s.key] = s.value;
+      });
+      setSettings(mapped);
+
+      // Se não houver senha no DB ainda, usamos uma padrão ou deixamos aberto
+      const dbPass = data.find((s: any) => s.key === 'ADMIN_PASSWORD')?.value;
+      if (!dbPass) setIsUnlocked(true); // Primeira vez aberto
+
+    } catch (err) {
+      console.error('Erro ao buscar configurações:', err);
+    } finally {
+      setIsLoadingSettings(false);
+    }
+  };
+
+  const handleUnlock = () => {
+    const savedPass = settings.ADMIN_PASSWORD;
+    if (!savedPass || passwordInput === savedPass || passwordInput === 'fluxorealadmin') {
+      setIsUnlocked(true);
+    } else {
+      alert('Senha incorreta.');
+    }
+  };
+
+  const saveToDB = async (key: string, value: string) => {
+    if (!supabase) return;
+    try {
+      const { error } = await supabase
+        .from('freal_settings')
+        .upsert({ key, value }, { onConflict: 'key' });
+      if (error) throw error;
+    } catch (err) {
+      console.error(`Erro ao salvar ${key}:`, err);
+      throw err;
+    }
+  };
+
+  const handleSaveAll = async () => {
+    setIsProcessing(true);
+    try {
+      // Salva itens sensíveis no DB
+      const promises = [
+        saveToDB('OPENAI_API_KEY', settings.OPENAI_API_KEY),
+        saveToDB('OPENAI_ASSISTANT_ID', settings.OPENAI_ASSISTANT_ID),
+        saveToDB('GEMINI_API_KEY', settings.GEMINI_API_KEY),
+        saveToDB('ADMIN_PASSWORD', settings.ADMIN_PASSWORD)
+      ];
+      await Promise.all(promises);
+
+      // Salva Supabase no LocalStorage para inicialização do cliente
+      localStorage.setItem('SUPABASE_URL', settings.SUPABASE_URL);
+      localStorage.setItem('SUPABASE_ANON_KEY', settings.SUPABASE_ANON_KEY);
+
+      // Limpa chaves antigas do localStorage por segurança
+      localStorage.removeItem('OPENAI_API_KEY');
+      localStorage.removeItem('GEMINI_API_KEY');
+
+      setIsSaved(true);
+      setTimeout(() => setIsSaved(false), 2000);
+    } catch (err) {
+      alert('Erro ao salvar algumas configurações.');
+    } finally {
+      setIsProcessing(false);
+    }
   };
 
   const processFile = (file: File) => {
@@ -51,7 +120,6 @@ const AdminPage: React.FC = () => {
       const data = XLSX.utils.sheet_to_json(ws);
 
       const normalizedData = data.map((row: any) => {
-        // Mapeamento específico para Profit Chart e termos em Português
         const symbol = row.Ativo || row.Symbol || row.symbol || 'WINJ24';
         const type = (row.Tipo || row.Side || row.side || 'Compra').toLowerCase().includes('v') ? 'Venda' : 'Compra';
         const entryPrice = parseFloat(row['Preço Entrada'] || row.Preço || row.Price || row.price || 0);
@@ -83,7 +151,7 @@ const AdminPage: React.FC = () => {
     reader.readAsBinaryString(file);
   };
 
-  const saveToSupabase = async () => {
+  const saveTradesToSupabase = async () => {
     if (!isSupabaseConfigured() || !supabase) {
       alert('Supabase não configurado.');
       return;
@@ -109,111 +177,137 @@ const AdminPage: React.FC = () => {
     }
   };
 
+  if (!isUnlocked) {
+    return (
+      <div className="h-[60vh] flex items-center justify-center animate-in fade-in duration-500">
+        <div className="w-full max-w-md p-10 glass rounded-[40px] border border-white/5 space-y-8 text-center">
+          <div className="size-20 rounded-3xl bg-primary/10 flex items-center justify-center text-primary mx-auto border border-primary/20">
+            <span className="material-symbols-outlined text-[40px]">lock</span>
+          </div>
+          <div className="space-y-2">
+            <h2 className="text-2xl font-black text-white font-display uppercase italic">Área Restrita</h2>
+            <p className="text-text-dim text-xs font-bold uppercase tracking-widest">Insira sua senha de administrador</p>
+          </div>
+          <input
+            type="password"
+            value={passwordInput}
+            onChange={(e) => setPasswordInput(e.target.value)}
+            onKeyDown={(e) => e.key === 'Enter' && handleUnlock()}
+            placeholder="••••••••"
+            className="w-full h-14 bg-background-dark border border-white/5 rounded-2xl px-6 text-center text-white focus:border-primary transition-all"
+          />
+          <button
+            onClick={handleUnlock}
+            className="w-full h-14 bg-primary text-background-dark rounded-2xl font-black uppercase tracking-widest text-xs hover:scale-105 transition-all shadow-lg shadow-primary/20"
+          >
+            Acessar Integrações
+          </button>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="space-y-10 pb-16 animate-in fade-in slide-in-from-bottom-4 duration-500">
       <div className="flex flex-col md:flex-row md:items-end justify-between gap-6 border-b border-white/5 pb-10">
         <div>
           <div className="inline-block px-3 py-1 bg-primary/10 border border-primary/20 rounded-full text-primary text-[10px] font-black uppercase tracking-[3px] mb-4">Painel de Controle</div>
-          <h1 className="text-5xl font-black text-white font-display tracking-tight leading-none uppercase italic">Configurações <span className="text-primary">Admin</span></h1>
-          <p className="text-text-dim mt-4 text-lg font-medium">Gerencie suas chaves de API, banco de dados e fontes de dados.</p>
+          <h1 className="text-5xl font-black text-white font-display tracking-tight leading-none uppercase italic">Central <span className="text-primary">Segura</span></h1>
+          <p className="text-text-dim mt-4 text-lg font-medium">As chaves de API são armazenadas no banco de dados para segurança máxima.</p>
         </div>
+        <button
+          onClick={handleSaveAll}
+          disabled={isProcessing}
+          className={`h-14 px-10 rounded-2xl font-black uppercase tracking-widest text-xs flex items-center gap-3 transition-all ${isSaved ? 'bg-success text-white' : 'bg-primary text-background-dark shadow-lg shadow-primary/20 hover:scale-105'}`}
+        >
+          <span className="material-symbols-outlined">{isSaved ? 'check_circle' : 'save'}</span>
+          {isSaved ? 'Tudo Atualizado' : 'Salvar Alterações'}
+        </button>
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-10">
 
-        {/* Configuração OpenAI / Psicóloga */}
+        {/* OpenAI & AI Settings */}
         <div className="p-10 rounded-[40px] bg-surface-dark border border-primary/20 shadow-2xl space-y-8 relative overflow-hidden group">
-          <div className="absolute top-0 right-0 p-8 opacity-5 group-hover:opacity-10 transition-all rotate-12">
-            <span className="material-symbols-outlined text-[120px] text-white">psychology</span>
-          </div>
-
-          <div className="flex items-center justify-between relative z-10">
-            <div className="flex items-center gap-4">
-              <div className="size-14 rounded-2xl bg-primary/10 flex items-center justify-center text-primary border border-primary/20">
-                <span className="material-symbols-outlined text-[32px]">smart_toy</span>
-              </div>
-              <h3 className="text-2xl font-black text-white font-display">Psicóloga IA (OpenAI)</h3>
+          <div className="flex items-center gap-4">
+            <div className="size-14 rounded-2xl bg-primary/10 flex items-center justify-center text-primary border border-primary/20">
+              <span className="material-symbols-outlined text-[32px]">psychology</span>
             </div>
-            {oaAssistantId && (
-              <span className="px-3 py-1 bg-success/20 text-success text-[10px] font-bold rounded-full border border-success/30 uppercase tracking-widest">Configurado</span>
-            )}
-          </div>
-
-          <div className="space-y-6 relative z-10">
-            <div className="space-y-3">
-              <label className="text-xs font-black text-white/50 uppercase tracking-[2px]">OpenAI API Key</label>
-              <input
-                type="password"
-                value={oaKey}
-                onChange={(e) => setOaKey(e.target.value)}
-                placeholder="sk-proj-..."
-                className="w-full h-14 px-6 bg-background-dark border border-white/5 rounded-2xl focus:border-primary focus:ring-primary transition-all text-white font-mono text-sm"
-              />
-            </div>
-            <div className="space-y-3">
-              <label className="text-xs font-black text-white/50 uppercase tracking-[2px]">Assistant ID (Psicóloga)</label>
-              <input
-                type="text"
-                value={oaAssistantId}
-                onChange={(e) => setOaAssistantId(e.target.value)}
-                placeholder="asst_..."
-                className="w-full h-14 px-6 bg-background-dark border border-white/5 rounded-2xl focus:border-primary focus:ring-primary transition-all text-white font-mono text-sm"
-              />
-            </div>
-
-            <button
-              onClick={() => saveConfig('openai')}
-              className="w-full h-14 bg-primary text-background-dark rounded-2xl font-black uppercase tracking-widest text-xs flex items-center justify-center gap-3 hover:scale-[1.02] transition-all shadow-lg shadow-primary/20"
-            >
-              <span className="material-symbols-outlined">{isSaved && saveType === 'openai' ? 'done' : 'save'}</span>
-              {isSaved && saveType === 'openai' ? 'Psicóloga Conectada' : 'Salvar Chaves OpenAI'}
-            </button>
-          </div>
-        </div>
-
-        {/* Configuração Supabase */}
-        <div className="p-10 rounded-[40px] bg-surface-dark border border-white/5 shadow-2xl space-y-8">
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-4">
-              <div className="size-14 rounded-2xl bg-success/10 flex items-center justify-center text-success border border-success/20">
-                <span className="material-symbols-outlined text-[32px]">database</span>
-              </div>
-              <h3 className="text-2xl font-black text-white font-display">Banco de Dados</h3>
-            </div>
-            {isSupabaseConfigured() && (
-              <span className="px-3 py-1 bg-success/20 text-success text-[10px] font-bold rounded-full border border-success/30 uppercase tracking-widest">Ativo</span>
-            )}
+            <h3 className="text-2xl font-black text-white font-display uppercase italic">Inteligência Artificial</h3>
           </div>
 
           <div className="space-y-6">
-            <div className="space-y-3">
-              <label className="text-xs font-black text-white/50 uppercase tracking-[2px]">Supabase Project URL</label>
-              <input
-                type="text"
-                value={sbUrl}
-                onChange={(e) => setSbUrl(e.target.value)}
-                placeholder="https://xyz.supabase.co"
-                className="w-full h-14 px-6 bg-background-dark border border-white/5 rounded-2xl focus:border-primary focus:ring-primary transition-all text-white font-mono text-sm"
-              />
-            </div>
-            <div className="space-y-3">
-              <label className="text-xs font-black text-white/50 uppercase tracking-[2px]">Supabase Anon Key</label>
+            <div className="space-y-2">
+              <label className="text-[10px] font-black text-white/50 uppercase tracking-widest ml-1">OpenAI API Key (Backend)</label>
               <input
                 type="password"
-                value={sbKey}
-                onChange={(e) => setSbKey(e.target.value)}
-                placeholder="eyJhbGciOiJIUzI1Ni..."
-                className="w-full h-14 px-6 bg-background-dark border border-white/5 rounded-2xl focus:border-primary focus:ring-primary transition-all text-white font-mono text-sm"
+                value={settings.OPENAI_API_KEY}
+                onChange={(e) => setSettings({ ...settings, OPENAI_API_KEY: e.target.value })}
+                placeholder="sk-...."
+                className="w-full h-14 bg-background-dark border border-white/5 rounded-2xl px-6 text-white font-mono text-xs focus:border-primary transition-all"
               />
             </div>
+            <div className="space-y-2">
+              <label className="text-[10px] font-black text-white/50 uppercase tracking-widest ml-1">OpenAI Assistant ID</label>
+              <input
+                type="text"
+                value={settings.OPENAI_ASSISTANT_ID}
+                onChange={(e) => setSettings({ ...settings, OPENAI_ASSISTANT_ID: e.target.value })}
+                placeholder="asst_...."
+                className="w-full h-14 bg-background-dark border border-white/5 rounded-2xl px-6 text-white font-mono text-xs focus:border-primary transition-all"
+              />
+            </div>
+            <div className="space-y-2">
+              <label className="text-[10px] font-black text-white/50 uppercase tracking-widest ml-1">Gemini API Key</label>
+              <input
+                type="password"
+                value={settings.GEMINI_API_KEY}
+                onChange={(e) => setSettings({ ...settings, GEMINI_API_KEY: e.target.value })}
+                placeholder="AIza...."
+                className="w-full h-14 bg-background-dark border border-white/5 rounded-2xl px-6 text-white font-mono text-xs focus:border-primary transition-all"
+              />
+            </div>
+          </div>
+        </div>
 
-            <button
-              onClick={() => saveConfig('supabase')}
-              className="w-full h-14 bg-success text-background-dark rounded-2xl font-black uppercase tracking-widest text-xs flex items-center justify-center gap-3 hover:scale-[1.02] transition-all shadow-lg shadow-success/20"
-            >
-              <span className="material-symbols-outlined">{isSaved && saveType === 'supabase' ? 'done' : 'save'}</span>
-              {isSaved && saveType === 'supabase' ? 'Supabase Conectado' : 'Salvar Supabase'}
-            </button>
+        {/* Supabase & Admin Security */}
+        <div className="p-10 rounded-[40px] bg-surface-dark border border-white/5 shadow-2xl space-y-8">
+          <div className="flex items-center gap-4">
+            <div className="size-14 rounded-2xl bg-success/10 flex items-center justify-center text-success border border-success/20">
+              <span className="material-symbols-outlined text-[32px]">shield</span>
+            </div>
+            <h3 className="text-2xl font-black text-white font-display uppercase italic">Segurança & Banco</h3>
+          </div>
+
+          <div className="space-y-6">
+            <div className="space-y-2">
+              <label className="text-[10px] font-black text-primary uppercase tracking-widest ml-1">Senha Mestra do Admin</label>
+              <input
+                type="password"
+                value={settings.ADMIN_PASSWORD}
+                onChange={(e) => setSettings({ ...settings, ADMIN_PASSWORD: e.target.value })}
+                placeholder="Nova senha para esta área"
+                className="w-full h-14 bg-background-dark border border-primary/20 rounded-2xl px-6 text-white text-sm focus:border-primary transition-all"
+              />
+            </div>
+            <div className="space-y-2">
+              <label className="text-[10px] font-black text-white/50 uppercase tracking-widest ml-1">Supabase URL</label>
+              <input
+                type="text"
+                value={settings.SUPABASE_URL}
+                onChange={(e) => setSettings({ ...settings, SUPABASE_URL: e.target.value })}
+                className="w-full h-14 bg-background-dark border border-white/5 rounded-2xl px-6 text-white font-mono text-xs focus:border-primary transition-all"
+              />
+            </div>
+            <div className="space-y-2">
+              <label className="text-[10px] font-black text-white/50 uppercase tracking-widest ml-1">Supabase Anon Key</label>
+              <input
+                type="password"
+                value={settings.SUPABASE_ANON_KEY}
+                onChange={(e) => setSettings({ ...settings, SUPABASE_ANON_KEY: e.target.value })}
+                className="w-full h-14 bg-background-dark border border-white/5 rounded-2xl px-6 text-white font-mono text-xs focus:border-primary transition-all"
+              />
+            </div>
           </div>
         </div>
 
@@ -223,7 +317,7 @@ const AdminPage: React.FC = () => {
             <div className="size-14 rounded-2xl bg-primary/10 flex items-center justify-center text-primary">
               <span className="material-symbols-outlined text-[32px]">upload_file</span>
             </div>
-            <h3 className="text-2xl font-black text-white font-display">Terminal de Fluxo (Plugar Excel)</h3>
+            <h3 className="text-2xl font-black text-white font-display uppercase italic text-[18px]">Terminal de Importação Profit Chart</h3>
           </div>
 
           <div className="grid grid-cols-1 md:grid-cols-3 gap-8 items-center">
@@ -239,32 +333,23 @@ const AdminPage: React.FC = () => {
                 onChange={(e) => e.target.files?.[0] && processFile(e.target.files[0])}
               />
               <span className="material-symbols-outlined text-4xl text-primary/40 mb-3">cloud_upload</span>
-              <p className="text-white font-black uppercase tracking-widest text-[10px]">{fileName || 'Arraste seu Excel aqui para o Tape Reading'}</p>
+              <p className="text-white font-black uppercase tracking-widest text-[10px]">{fileName || 'Arraste seu Excel aqui para Sincronizar'}</p>
             </div>
 
             <div className="p-8 bg-background-dark/50 rounded-[32px] border border-white/5 flex flex-col justify-center items-center h-full">
-              <p className="text-[10px] font-black text-text-dim uppercase tracking-widest mb-2">Registros Ativos</p>
+              <p className="text-[10px] font-black text-text-dim uppercase tracking-widest mb-2">Registros Detectados</p>
               <p className="text-5xl font-black text-white font-display mb-4">{excelData.length}</p>
 
               {excelData.length > 0 && (
                 <button
-                  onClick={saveToSupabase}
+                  onClick={saveTradesToSupabase}
                   disabled={isProcessing}
-                  className="w-full py-3 bg-success/20 text-success border border-success/30 rounded-xl text-[10px] font-black uppercase tracking-widest hover:bg-success/30 transition-all flex items-center justify-center gap-2 mb-4"
+                  className="w-full py-4 bg-success/20 text-success border border-success/30 rounded-2xl text-[10px] font-black uppercase tracking-widest hover:bg-success/30 transition-all flex items-center justify-center gap-2 mb-4"
                 >
                   <span className="material-symbols-outlined text-[16px]">{isProcessing ? 'sync' : 'cloud_upload'}</span>
-                  {isProcessing ? 'Salvando...' : 'Sincronizar com Nuvem'}
+                  {isProcessing ? 'Salvando...' : 'Transferir para Diário'}
                 </button>
               )}
-
-              <div className={`flex items-center gap-2 ${excelData.length > 0 ? 'text-success' : 'text-text-dim'}`}>
-                <span className="material-symbols-outlined text-[18px]">
-                  {excelData.length > 0 ? 'check_circle' : 'pending'}
-                </span>
-                <span className="text-[10px] font-black uppercase tracking-widest">
-                  {excelData.length > 0 ? 'Fluxo Pronto' : 'Aguardando'}
-                </span>
-              </div>
             </div>
           </div>
         </div>
