@@ -31,7 +31,7 @@ const TradeHistoryPage: React.FC = () => {
     setIsGeneratingInsight(true);
     try {
       const tradesSummary = filteredTrades.map(t =>
-        `Ativo: ${t.symbol}, Tipo: ${t.type}, PL: ${t.netPL}, Sentimento: ${t.emotionPre}`
+        `Ativo: ${t.symbol}, Tipo: ${t.type}, PL: ${t.netPL}, Sentimento: ${t.emotion_pre}`
       ).join('\n');
 
       const prompt = `Analise os seguintes trades do mês e forneça um resumo valioso sobre o desempenho e comportamento emocional do trader:\n${tradesSummary}`;
@@ -126,7 +126,7 @@ const TradeHistoryPage: React.FC = () => {
             exitTime,
             result: netPL > 0 ? TradeResult.WIN : netPL < 0 ? TradeResult.LOSS : TradeResult.OPEN,
             asset_class: symbol.length <= 6 ? 'FUT' : 'STK',
-            emotionPre: 'Neutro',
+            emotion_pre: 'Neutro',
             timeframe: '5m',
           };
         });
@@ -322,7 +322,7 @@ const TradeHistoryPage: React.FC = () => {
                     <td className="px-6 py-5">
                       <div className="flex items-center gap-2">
                         <span className="material-symbols-outlined text-[16px] text-primary">sentiment_satisfied</span>
-                        <span className="text-xs font-bold text-white uppercase italic">{trade.emotionPre || 'Neutro'}</span>
+                        <span className="text-xs font-bold text-white uppercase italic">{trade.emotion_pre || 'Neutro'}</span>
                       </div>
                     </td>
                     <td className="px-6 py-5">

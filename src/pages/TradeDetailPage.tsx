@@ -315,7 +315,8 @@ const TradeDetailPage: React.FC = () => {
                 <p className="text-[9px] font-black text-text-dim uppercase tracking-widest">Emoção</p>
                 <div className="flex items-center gap-2">
                   <span className="material-symbols-outlined text-primary text-[16px] fill">sentiment_satisfied</span>
-                  <p className="text-sm font-bold text-white uppercase">{trade.emotionPre}</p>
+                  <p className="text-sm font-bold text-white uppercase">{trade.emotion_pre
+                  }</p>
                 </div>
               </div>
             </div>

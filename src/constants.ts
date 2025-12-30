@@ -13,7 +13,7 @@ export const MOCK_TRADES: Trade[] = [
     time: '14:30',
     timeframe: '5m',
     asset_class: 'FUT',
-    emotionPre: 'Calmo',
+    emotion_pre: 'Calmo',
     setup: 'Rompimento de Tendência'
   },
   {
@@ -28,7 +28,7 @@ export const MOCK_TRADES: Trade[] = [
     time: '11:15',
     timeframe: '15m',
     asset_class: 'FUT',
-    emotionPre: 'Neutro',
+    emotion_pre: 'Neutro',
     setup: 'Pullback'
   },
   {
@@ -43,7 +43,7 @@ export const MOCK_TRADES: Trade[] = [
     time: '16:45',
     timeframe: '5m',
     asset_class: 'FUT',
-    emotionPre: 'Ansioso',
+    emotion_pre: 'Ansioso',
     setup: 'Retorno à Média'
   },
   {
@@ -58,7 +58,7 @@ export const MOCK_TRADES: Trade[] = [
     time: '10:20',
     timeframe: 'D',
     asset_class: 'FUT',
-    emotionPre: 'Confiante',
+    emotion_pre: 'Confiante',
     setup: 'Rompimento'
   }
 ];

@@ -37,7 +37,7 @@ const NewTradePage: React.FC = () => {
         time: new Date().toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' }),
         timeframe,
         asset_class: 'FUT',
-        emotionPre: emotion,
+        emotion_pre: emotion,
         setup,
         notes
       }]);

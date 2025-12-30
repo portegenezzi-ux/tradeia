@@ -10,7 +10,7 @@ export async function getTradeInsight(trade: Trade) {
       Preço de Saída: ${trade.exitPrice || 'N/A'}
       Resultado: ${trade.result}
       Lucro/Prejuízo: R$ ${trade.netPL}
-      Emoção Pré-trade: ${trade.emotionPre}
+      Emoção Pré-trade: ${trade.emotion_pre}
       Estratégia (Setup): ${trade.setup}
       Notas: ${trade.notes || 'Nenhuma nota fornecida'}
 

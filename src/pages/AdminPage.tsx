@@ -140,7 +140,7 @@ const AdminPage: React.FC = () => {
           time,
           timeframe: row.Timeframe || '5m',
           asset_class: symbol.startsWith('WIN') || symbol.startsWith('WDO') ? 'FUT' : 'STK',
-          emotionPre: 'Neutro',
+          emotion_pre: 'Neutro',
           setup: row.Setup || 'Importado'
         };
       });

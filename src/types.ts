@@ -26,8 +26,8 @@ export interface Trade {
   exitTime?: string;
   timeframe: string;
   asset_class: 'FUT' | 'STK' | 'CRYPTO' | 'FOREX';
-  emotionPre: string;
-  emotionPost?: string;
+  emotion_pre: string;
+  emotion_post?: string;
   notes?: string;
   setup?: string;
   mep?: number;
