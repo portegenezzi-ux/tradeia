@@ -59,38 +59,57 @@ const TradeHistoryPage: React.FC = () => {
     const reader = new FileReader();
     reader.onload = async (evt) => {
       try {
-        const bstr = evt.target?.result;
-        const wb = XLSX.read(bstr, { type: 'binary' });
+        const dataBuffer = evt.target?.result;
+        if (!dataBuffer) throw new Error('Falha ao ler o buffer do arquivo.');
+
+        const wb = XLSX.read(dataBuffer, { type: 'array', cellDates: true });
         const wsname = wb.SheetNames[0];
         const ws = wb.Sheets[wsname];
         const data = XLSX.utils.sheet_to_json(ws);
 
+        console.log('Dados brutos detectados:', data.length, 'linhas');
+        if (data.length > 0) {
+          console.log('Exemplo da primeira linha:', data[0]);
+        }
+
         if (data.length === 0) {
-          alert('O arquivo está vazio.');
+          alert('O arquivo está vazio ou o formato não foi reconhecido.');
           setIsLoading(false);
           return;
         }
 
         const importedTrades: Partial<Trade>[] = data.map((row: any, index) => {
-          // Mapeamento Flexível baseado no pedido do usuário
-          const symbol = row['Ativo'] || row['Ativo/Contrato'] || 'N/A';
-          const entryTimeFull = row['Horário de Abertura'] || row['Data/Hora'] || '';
-          const exitTimeFull = row['Horario de Fechamento'] || '';
+          // Mapeamento Flexível baseado no pedido do usuário e variações do Profit
+          const symbolInput = row['Ativo'] || row['Ativo/Contrato'] || row['Symbol'] || 'N/A';
+          const entryTimeFull = row['Horário de Abertura'] || row['Data/Hora'] || row['Abertura'] || '';
+          const exitTimeFull = row['Horario de Fechamento'] || row['Fechamento'] || '';
 
-          // Separar Data e Hora se possível
-          const date = entryTimeFull.split(' ')[0] || new Date().toLocaleDateString('pt-BR').substring(0, 5);
-          const time = entryTimeFull.split(' ')[1] || '00:00';
-          const exitTime = exitTimeFull.split(' ')[1] || '';
+          // Limpeza do Ativo (ex: remove prefixo se houver)
+          const symbol = String(symbolInput).split(' ')[0];
 
-          const side = row['Lado'] || '';
-          const type = side.toLowerCase().includes('venda') ? TradeType.SHORT : TradeType.LONG;
+          // Separar Data e Hora
+          const dateStr = String(entryTimeFull).split(' ')[0] || '';
+          const time = String(entryTimeFull).split(' ')[1] || '00:00';
+          const exitTime = String(exitTimeFull).split(' ')[1] || '';
 
-          const qty = Number(row['Quantidade']) || 1;
-          const entryPrice = Number(row['Preço de compra']) || Number(row['Preço Médio']) || 0;
-          const exitPrice = Number(row['Preço de Venda']) || 0;
-          const mep = Number(row['MEP']) || 0;
-          const men = Number(row['MEN']) || 0;
-          const netPL = Number(row['Resultado da operação']) || Number(row['Resultado']) || 0;
+          // Garantir formato DD/MM (Profit pode vir DD/MM/AAAA)
+          let date = dateStr;
+          if (dateStr.includes('/')) {
+            const parts = dateStr.split('/');
+            date = `${parts[0]}/${parts[1]}`;
+          } else {
+            date = new Date().toLocaleDateString('pt-BR').substring(0, 5);
+          }
+
+          const side = String(row['Lado'] || row['Tipo'] || '').toLowerCase();
+          const type = side.includes('venda') ? TradeType.SHORT : TradeType.LONG;
+
+          const qty = Number(row['Quantidade'] || row['Qtd'] || 1);
+          const entryPrice = Number(row['Preço de compra'] || row['Preço Médio'] || row['Entrada'] || 0);
+          const exitPrice = Number(row['Preço de Venda'] || row['Saída'] || 0);
+          const mep = Number(row['MEP'] || 0);
+          const men = Number(row['MEN'] || 0);
+          const netPL = Number(row['Resultado da operação'] || row['Resultado'] || row['Lucro/Prejuízo'] || 0);
 
           return {
             symbol,
@@ -105,13 +124,14 @@ const TradeHistoryPage: React.FC = () => {
             time,
             exitTime,
             result: netPL > 0 ? TradeResult.WIN : netPL < 0 ? TradeResult.LOSS : TradeResult.OPEN,
-            assetClass: symbol.length <= 6 ? 'FUT' : 'STK', // Heurística B3 Simple
+            assetClass: symbol.length <= 6 ? 'FUT' : 'STK',
             emotionPre: 'Neutro',
-            timeframe: '5m', // Padrão
+            timeframe: '5m',
           };
         });
 
         if (supabase) {
+          console.log('Enviando para Supabase:', importedTrades.length, 'trades');
           const { error } = await supabase
             .from(TABLES.TRADES)
             .insert(importedTrades);
@@ -121,18 +141,17 @@ const TradeHistoryPage: React.FC = () => {
           fetchTrades();
         } else {
           setTrades([...trades, ...importedTrades as Trade[]]);
-          alert('Supabase não configurado. Dados adicionados localmente (Demo).');
+          alert('Demo: Dados adicionados localmente.');
         }
-      } catch (err) {
-        console.error('Erro ao importar arquivo:', err);
-        alert('Erro ao processar o arquivo. Verifique o formato.');
+      } catch (err: any) {
+        console.error('Erro DETALHADO na importação:', err);
+        alert(`Erro ao processar: ${err.message || 'Verifique se as colunas estão corretas.'}`);
       } finally {
         setIsLoading(false);
-        // Limpar input
         e.target.value = '';
       }
     };
-    reader.readAsBinaryString(file);
+    reader.readAsArrayBuffer(file);
   };
 
   const fetchTrades = async () => {
