@@ -2,8 +2,9 @@
 import React, { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { supabase, TABLES } from '../supabaseClient';
-import { Trade } from '../types';
+import { Trade, TradeResult, TradeType } from '../types';
 import { MOCK_TRADES } from '../constants';
+import * as XLSX from 'xlsx';
 
 const TradeHistoryPage: React.FC = () => {
   const navigate = useNavigate();
@@ -48,6 +49,90 @@ const TradeHistoryPage: React.FC = () => {
     } finally {
       setIsGeneratingInsight(false);
     }
+  };
+
+  const handleProfitImport = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    setIsLoading(true);
+    const reader = new FileReader();
+    reader.onload = async (evt) => {
+      try {
+        const bstr = evt.target?.result;
+        const wb = XLSX.read(bstr, { type: 'binary' });
+        const wsname = wb.SheetNames[0];
+        const ws = wb.Sheets[wsname];
+        const data = XLSX.utils.sheet_to_json(ws);
+
+        if (data.length === 0) {
+          alert('O arquivo está vazio.');
+          setIsLoading(false);
+          return;
+        }
+
+        const importedTrades: Partial<Trade>[] = data.map((row: any, index) => {
+          // Mapeamento Flexível baseado no pedido do usuário
+          const symbol = row['Ativo'] || row['Ativo/Contrato'] || 'N/A';
+          const entryTimeFull = row['Horário de Abertura'] || row['Data/Hora'] || '';
+          const exitTimeFull = row['Horario de Fechamento'] || '';
+
+          // Separar Data e Hora se possível
+          const date = entryTimeFull.split(' ')[0] || new Date().toLocaleDateString('pt-BR').substring(0, 5);
+          const time = entryTimeFull.split(' ')[1] || '00:00';
+          const exitTime = exitTimeFull.split(' ')[1] || '';
+
+          const side = row['Lado'] || '';
+          const type = side.toLowerCase().includes('venda') ? TradeType.SHORT : TradeType.LONG;
+
+          const qty = Number(row['Quantidade']) || 1;
+          const entryPrice = Number(row['Preço de compra']) || Number(row['Preço Médio']) || 0;
+          const exitPrice = Number(row['Preço de Venda']) || 0;
+          const mep = Number(row['MEP']) || 0;
+          const men = Number(row['MEN']) || 0;
+          const netPL = Number(row['Resultado da operação']) || Number(row['Resultado']) || 0;
+
+          return {
+            symbol,
+            type,
+            quantity: qty,
+            entryPrice,
+            exitPrice,
+            mep,
+            men,
+            netPL,
+            date,
+            time,
+            exitTime,
+            result: netPL > 0 ? TradeResult.WIN : netPL < 0 ? TradeResult.LOSS : TradeResult.OPEN,
+            assetClass: symbol.length <= 6 ? 'FUT' : 'STK', // Heurística B3 Simple
+            emotionPre: 'Neutro',
+            timeframe: '5m', // Padrão
+          };
+        });
+
+        if (supabase) {
+          const { error } = await supabase
+            .from(TABLES.TRADES)
+            .insert(importedTrades);
+
+          if (error) throw error;
+          alert(`${importedTrades.length} trades importados com sucesso.`);
+          fetchTrades();
+        } else {
+          setTrades([...trades, ...importedTrades as Trade[]]);
+          alert('Supabase não configurado. Dados adicionados localmente (Demo).');
+        }
+      } catch (err) {
+        console.error('Erro ao importar arquivo:', err);
+        alert('Erro ao processar o arquivo. Verifique o formato.');
+      } finally {
+        setIsLoading(false);
+        // Limpar input
+        e.target.value = '';
+      }
+    };
+    reader.readAsBinaryString(file);
   };
 
   const fetchTrades = async () => {
@@ -97,6 +182,23 @@ const TradeHistoryPage: React.FC = () => {
               <option key={i} value={i}>{m}</option>
             ))}
           </select>
+          <div className="relative">
+            <input
+              type="file"
+              id="profit-upload"
+              hidden
+              accept=".csv, .xlsx, .xls"
+              onChange={handleProfitImport}
+            />
+            <button
+              onClick={() => document.getElementById('profit-upload')?.click()}
+              disabled={isLoading}
+              className="flex items-center gap-2 px-6 py-2 bg-surface-dark border border-primary/30 text-primary rounded-xl text-sm font-black uppercase tracking-widest hover:bg-primary/5 transition-all"
+            >
+              <span className="material-symbols-outlined text-[18px]">publish</span>
+              Importar Profit
+            </button>
+          </div>
           <button
             onClick={generateAIInsights}
             disabled={isGeneratingInsight || filteredTrades.length === 0}

@@ -16,18 +16,22 @@ export interface Trade {
   id: string;
   symbol: string;
   type: TradeType;
+  quantity?: number;
   entryPrice: number;
   exitPrice?: number;
   result: TradeResult;
   netPL: number;
   date: string;
   time: string;
+  exitTime?: string;
   timeframe: string;
   assetClass: 'FUT' | 'STK' | 'CRYPTO' | 'FOREX';
   emotionPre: string;
   emotionPost?: string;
   notes?: string;
   setup?: string;
+  mep?: number;
+  men?: number;
 }
 
 export interface StatCardData {
