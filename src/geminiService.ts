@@ -2,7 +2,20 @@
 import { GoogleGenAI } from "@google/genai";
 import { Trade } from "./types";
 
-const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
+let aiInstance: any = null;
+
+function getAI() {
+  if (aiInstance) return aiInstance;
+  const apiKey = process.env.API_KEY || (process.env as any).GEMINI_API_KEY || '';
+  if (!apiKey) return null;
+  try {
+    aiInstance = new GoogleGenAI({ apiKey });
+    return aiInstance;
+  } catch (e) {
+    console.error("Erro ao inicializar GoogleGenAI:", e);
+    return null;
+  }
+}
 
 export async function getTradeInsight(trade: Trade) {
   try {
@@ -21,6 +34,11 @@ export async function getTradeInsight(trade: Trade) {
       Forneça um "Insight do Coach de IA" curto, profissional e encorajador (máximo de 100 palavras).
       Foque em disciplina, precisão técnica e melhorias psicológicas. RESPONDA EM PORTUGUÊS BRASILEIRO.
     `;
+
+    const ai = getAI();
+    if (!ai) {
+      return "Configuração de IA (Gemini) indisponível. Verifique suas chaves.";
+    }
 
     const response = await ai.models.generateContent({
       model: 'gemini-3-flash-preview',

@@ -2,21 +2,21 @@
 import React, { useState, useContext } from 'react';
 import * as XLSX from 'xlsx';
 import { DataContext } from '../App';
-import { isSupabaseConfigured } from '../supabaseClient';
+import { supabase, TABLES, isSupabaseConfigured } from '../supabaseClient';
 
 const AdminPage: React.FC = () => {
   const { setExcelData, excelData } = useContext(DataContext);
   const [isProcessing, setIsProcessing] = useState(false);
   const [fileName, setFileName] = useState<string | null>(null);
-  
+
   // Estados para configuração do Supabase
   const [sbUrl, setSbUrl] = useState(localStorage.getItem('SUPABASE_URL') || '');
   const [sbKey, setSbKey] = useState(localStorage.getItem('SUPABASE_ANON_KEY') || '');
-  
+
   // Estados para configuração da OpenAI
   const [oaKey, setOaKey] = useState(localStorage.getItem('OPENAI_API_KEY') || '');
   const [oaAssistantId, setOaAssistantId] = useState(localStorage.getItem('OPENAI_ASSISTANT_ID') || '');
-  
+
   const [isSaved, setIsSaved] = useState(false);
   const [saveType, setSaveType] = useState<'supabase' | 'openai' | null>(null);
 
@@ -28,20 +28,20 @@ const AdminPage: React.FC = () => {
       localStorage.setItem('OPENAI_API_KEY', oaKey);
       localStorage.setItem('OPENAI_ASSISTANT_ID', oaAssistantId);
     }
-    
+
     setSaveType(type);
     setIsSaved(true);
     setTimeout(() => {
       setIsSaved(false);
       setSaveType(null);
-      if (type === 'supabase') window.location.reload(); 
+      if (type === 'supabase') window.location.reload();
     }, 1500);
   };
 
   const processFile = (file: File) => {
     setIsProcessing(true);
     setFileName(file.name);
-    
+
     const reader = new FileReader();
     reader.onload = (e) => {
       const bstr = e.target?.result;
@@ -49,18 +49,64 @@ const AdminPage: React.FC = () => {
       const wsname = wb.SheetNames[0];
       const ws = wb.Sheets[wsname];
       const data = XLSX.utils.sheet_to_json(ws);
-      
-      const normalizedData = data.map((row: any) => ({
-        price: row.Preço || row.Price || row.price || 0,
-        volume: row.Quantidade || row.Volume || row.Qty || row.size || 0,
-        side: (row.Agressor || row.Side || row.side || 'buy').toLowerCase().includes('v') ? 'sell' : 'buy',
-        time: row.Horário || row.Time || row.time || new Date().toLocaleTimeString()
-      }));
+
+      const normalizedData = data.map((row: any) => {
+        // Mapeamento específico para Profit Chart e termos em Português
+        const symbol = row.Ativo || row.Symbol || row.symbol || 'WINJ24';
+        const type = (row.Tipo || row.Side || row.side || 'Compra').toLowerCase().includes('v') ? 'Venda' : 'Compra';
+        const entryPrice = parseFloat(row['Preço Entrada'] || row.Preço || row.Price || row.price || 0);
+        const exitPrice = parseFloat(row['Preço Saída'] || row.Saída || row.Exit || row.exitPrice || 0);
+        const result = row.Resultado || row.Result || (exitPrice > entryPrice ? 'Ganho' : 'Perda');
+        const netPL = parseFloat(row['Lucro/Prejuízo'] || row.PL || row.netPL || 0);
+        const date = row.Data || row.Date || new Date().toLocaleDateString('pt-BR');
+        const time = row.Horário || row.Time || new Date().toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' });
+
+        return {
+          symbol,
+          type,
+          entryPrice,
+          exitPrice,
+          result,
+          netPL,
+          date,
+          time,
+          timeframe: row.Timeframe || '5m',
+          assetClass: symbol.startsWith('WIN') || symbol.startsWith('WDO') ? 'FUT' : 'STK',
+          emotionPre: 'Neutro',
+          setup: row.Setup || 'Importado'
+        };
+      });
 
       setExcelData(normalizedData);
       setIsProcessing(false);
     };
     reader.readAsBinaryString(file);
+  };
+
+  const saveToSupabase = async () => {
+    if (!isSupabaseConfigured() || !supabase) {
+      alert('Supabase não configurado.');
+      return;
+    }
+
+    if (excelData.length === 0) {
+      alert('Nenhum dado para salvar.');
+      return;
+    }
+
+    setIsProcessing(true);
+    try {
+      const { error } = await supabase.from(TABLES.TRADES).insert(excelData);
+      if (error) throw error;
+      alert(`${excelData.length} trades importados com sucesso!`);
+      setExcelData([]);
+      setFileName(null);
+    } catch (err) {
+      console.error('Erro ao salvar no Supabase:', err);
+      alert('Erro ao salvar no banco de dados.');
+    } finally {
+      setIsProcessing(false);
+    }
   };
 
   return (
@@ -74,13 +120,13 @@ const AdminPage: React.FC = () => {
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-10">
-        
+
         {/* Configuração OpenAI / Psicóloga */}
         <div className="p-10 rounded-[40px] bg-surface-dark border border-primary/20 shadow-2xl space-y-8 relative overflow-hidden group">
           <div className="absolute top-0 right-0 p-8 opacity-5 group-hover:opacity-10 transition-all rotate-12">
             <span className="material-symbols-outlined text-[120px] text-white">psychology</span>
           </div>
-          
+
           <div className="flex items-center justify-between relative z-10">
             <div className="flex items-center gap-4">
               <div className="size-14 rounded-2xl bg-primary/10 flex items-center justify-center text-primary border border-primary/20">
@@ -96,8 +142,8 @@ const AdminPage: React.FC = () => {
           <div className="space-y-6 relative z-10">
             <div className="space-y-3">
               <label className="text-xs font-black text-white/50 uppercase tracking-[2px]">OpenAI API Key</label>
-              <input 
-                type="password" 
+              <input
+                type="password"
                 value={oaKey}
                 onChange={(e) => setOaKey(e.target.value)}
                 placeholder="sk-proj-..."
@@ -106,16 +152,16 @@ const AdminPage: React.FC = () => {
             </div>
             <div className="space-y-3">
               <label className="text-xs font-black text-white/50 uppercase tracking-[2px]">Assistant ID (Psicóloga)</label>
-              <input 
-                type="text" 
+              <input
+                type="text"
                 value={oaAssistantId}
                 onChange={(e) => setOaAssistantId(e.target.value)}
                 placeholder="asst_..."
                 className="w-full h-14 px-6 bg-background-dark border border-white/5 rounded-2xl focus:border-primary focus:ring-primary transition-all text-white font-mono text-sm"
               />
             </div>
-            
-            <button 
+
+            <button
               onClick={() => saveConfig('openai')}
               className="w-full h-14 bg-primary text-background-dark rounded-2xl font-black uppercase tracking-widest text-xs flex items-center justify-center gap-3 hover:scale-[1.02] transition-all shadow-lg shadow-primary/20"
             >
@@ -142,8 +188,8 @@ const AdminPage: React.FC = () => {
           <div className="space-y-6">
             <div className="space-y-3">
               <label className="text-xs font-black text-white/50 uppercase tracking-[2px]">Supabase Project URL</label>
-              <input 
-                type="text" 
+              <input
+                type="text"
                 value={sbUrl}
                 onChange={(e) => setSbUrl(e.target.value)}
                 placeholder="https://xyz.supabase.co"
@@ -152,16 +198,16 @@ const AdminPage: React.FC = () => {
             </div>
             <div className="space-y-3">
               <label className="text-xs font-black text-white/50 uppercase tracking-[2px]">Supabase Anon Key</label>
-              <input 
-                type="password" 
+              <input
+                type="password"
                 value={sbKey}
                 onChange={(e) => setSbKey(e.target.value)}
                 placeholder="eyJhbGciOiJIUzI1Ni..."
                 className="w-full h-14 px-6 bg-background-dark border border-white/5 rounded-2xl focus:border-primary focus:ring-primary transition-all text-white font-mono text-sm"
               />
             </div>
-            
-            <button 
+
+            <button
               onClick={() => saveConfig('supabase')}
               className="w-full h-14 bg-success text-background-dark rounded-2xl font-black uppercase tracking-widest text-xs flex items-center justify-center gap-3 hover:scale-[1.02] transition-all shadow-lg shadow-success/20"
             >
@@ -179,16 +225,16 @@ const AdminPage: React.FC = () => {
             </div>
             <h3 className="text-2xl font-black text-white font-display">Terminal de Fluxo (Plugar Excel)</h3>
           </div>
-          
+
           <div className="grid grid-cols-1 md:grid-cols-3 gap-8 items-center">
-            <div 
+            <div
               onDragOver={(e) => e.preventDefault()}
-              onDrop={(e) => { e.preventDefault(); const f = e.dataTransfer.files[0]; if(f) processFile(f); }}
+              onDrop={(e) => { e.preventDefault(); const f = e.dataTransfer.files[0]; if (f) processFile(f); }}
               className="md:col-span-2 drop-zone min-h-[180px] rounded-[32px] flex flex-col items-center justify-center p-6 cursor-pointer relative"
             >
-              <input 
-                type="file" 
-                accept=".xlsx, .xls, .csv" 
+              <input
+                type="file"
+                accept=".xlsx, .xls, .csv"
                 className="absolute inset-0 opacity-0 cursor-pointer"
                 onChange={(e) => e.target.files?.[0] && processFile(e.target.files[0])}
               />
@@ -197,16 +243,28 @@ const AdminPage: React.FC = () => {
             </div>
 
             <div className="p-8 bg-background-dark/50 rounded-[32px] border border-white/5 flex flex-col justify-center items-center h-full">
-               <p className="text-[10px] font-black text-text-dim uppercase tracking-widest mb-2">Registros Ativos</p>
-               <p className="text-5xl font-black text-white font-display">{excelData.length}</p>
-               <div className={`mt-4 flex items-center gap-2 ${excelData.length > 0 ? 'text-success' : 'text-text-dim'}`}>
-                 <span className="material-symbols-outlined text-[18px]">
-                   {excelData.length > 0 ? 'check_circle' : 'pending'}
-                 </span>
-                 <span className="text-[10px] font-black uppercase tracking-widest">
-                   {excelData.length > 0 ? 'Fluxo Pronto' : 'Aguardando'}
-                 </span>
-               </div>
+              <p className="text-[10px] font-black text-text-dim uppercase tracking-widest mb-2">Registros Ativos</p>
+              <p className="text-5xl font-black text-white font-display mb-4">{excelData.length}</p>
+
+              {excelData.length > 0 && (
+                <button
+                  onClick={saveToSupabase}
+                  disabled={isProcessing}
+                  className="w-full py-3 bg-success/20 text-success border border-success/30 rounded-xl text-[10px] font-black uppercase tracking-widest hover:bg-success/30 transition-all flex items-center justify-center gap-2 mb-4"
+                >
+                  <span className="material-symbols-outlined text-[16px]">{isProcessing ? 'sync' : 'cloud_upload'}</span>
+                  {isProcessing ? 'Salvando...' : 'Sincronizar com Nuvem'}
+                </button>
+              )}
+
+              <div className={`flex items-center gap-2 ${excelData.length > 0 ? 'text-success' : 'text-text-dim'}`}>
+                <span className="material-symbols-outlined text-[18px]">
+                  {excelData.length > 0 ? 'check_circle' : 'pending'}
+                </span>
+                <span className="text-[10px] font-black uppercase tracking-widest">
+                  {excelData.length > 0 ? 'Fluxo Pronto' : 'Aguardando'}
+                </span>
+              </div>
             </div>
           </div>
         </div>
