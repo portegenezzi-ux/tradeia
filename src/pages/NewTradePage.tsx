@@ -36,7 +36,7 @@ const NewTradePage: React.FC = () => {
         date: new Date().toLocaleDateString('pt-BR'),
         time: new Date().toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' }),
         timeframe,
-        assetClass: 'FUT',
+        asset_class: 'FUT',
         emotionPre: emotion,
         setup,
         notes
@@ -61,7 +61,7 @@ const NewTradePage: React.FC = () => {
         </div>
         <div className="flex gap-3">
           <button onClick={() => navigate(-1)} className="px-6 py-2 rounded-xl bg-surface-dark border border-white/5 hover:bg-white/10 transition-all text-sm font-bold text-white">Cancelar</button>
-          <button 
+          <button
             onClick={handleSaveTrade}
             disabled={isSaving}
             className={`px-6 py-2 rounded-xl bg-primary hover:bg-primary/90 text-background-dark font-black text-sm transition-all shadow-lg shadow-primary/20 uppercase tracking-widest font-display flex items-center gap-2 ${isSaving ? 'opacity-50 cursor-not-allowed' : ''}`}
@@ -85,14 +85,14 @@ const NewTradePage: React.FC = () => {
             <div className="space-y-3">
               <label className="text-xs font-black text-white/50 uppercase tracking-[2px]">Ativo B3</label>
               <div className="h-14 flex p-1 bg-surface-dark border border-white/5 rounded-2xl">
-                <button 
+                <button
                   onClick={() => setAsset('WIN')}
                   className={`flex-1 rounded-xl text-xs font-black transition-all flex items-center justify-center gap-2 ${asset === 'WIN' ? 'bg-primary text-background-dark shadow-lg shadow-primary/20' : 'text-text-dim hover:text-white'}`}
                 >
                   <span className="material-symbols-outlined text-[18px]">trending_up</span>
                   WIN (Índice)
                 </button>
-                <button 
+                <button
                   onClick={() => setAsset('WDO')}
                   className={`flex-1 rounded-xl text-xs font-black transition-all flex items-center justify-center gap-2 ${asset === 'WDO' ? 'bg-primary text-background-dark shadow-lg shadow-primary/20' : 'text-text-dim hover:text-white'}`}
                 >
@@ -105,13 +105,13 @@ const NewTradePage: React.FC = () => {
             <div className="space-y-3">
               <label className="text-xs font-black text-white/50 uppercase tracking-[2px]">Tipo de Operação</label>
               <div className="h-14 flex p-1 bg-surface-dark border border-white/5 rounded-2xl">
-                <button 
+                <button
                   onClick={() => setTradeType('buy')}
                   className={`flex-1 rounded-xl text-xs font-black transition-all ${tradeType === 'buy' ? 'bg-success/20 text-success border border-success/30' : 'text-text-dim hover:text-white'}`}
                 >
                   Compra (Long)
                 </button>
-                <button 
+                <button
                   onClick={() => setTradeType('sell')}
                   className={`flex-1 rounded-xl text-xs font-black transition-all ${tradeType === 'sell' ? 'bg-danger/20 text-danger border border-danger/30' : 'text-text-dim hover:text-white'}`}
                 >
@@ -126,7 +126,7 @@ const NewTradePage: React.FC = () => {
               <label className="text-xs font-black text-white/50 uppercase tracking-[2px]">Timeframe</label>
               <div className="flex gap-2">
                 {['1m', '5m', '15m', '1H', '4H', 'D'].map(tf => (
-                  <button 
+                  <button
                     key={tf}
                     onClick={() => setTimeframe(tf)}
                     className={`size-12 rounded-xl border text-xs font-black transition-all ${timeframe === tf ? 'bg-primary/20 border-primary text-primary' : 'bg-surface-dark border-white/5 text-text-dim hover:border-white/20'}`}
@@ -139,7 +139,7 @@ const NewTradePage: React.FC = () => {
 
             <div className="space-y-3">
               <label className="text-xs font-black text-white/50 uppercase tracking-[2px]">Setup / Estratégia</label>
-              <select 
+              <select
                 value={setup}
                 onChange={(e) => setSetup(e.target.value)}
                 className="w-full h-14 bg-surface-dark border border-white/5 rounded-2xl focus:border-primary focus:ring-primary text-white font-bold px-4"
@@ -155,32 +155,32 @@ const NewTradePage: React.FC = () => {
           <div className="p-8 rounded-[32px] bg-white/5 border border-white/5 grid grid-cols-1 sm:grid-cols-3 gap-8">
             <div className="space-y-2">
               <label className="text-[10px] font-black uppercase tracking-widest text-primary">Preço de Entrada</label>
-              <input 
-                type="number" 
+              <input
+                type="number"
                 value={entryPrice}
                 onChange={(e) => setEntryPrice(e.target.value)}
-                placeholder="0.00" 
-                className="w-full h-14 bg-background-dark border border-white/5 rounded-2xl text-xl font-black text-white focus:border-primary transition-all px-4" 
+                placeholder="0.00"
+                className="w-full h-14 bg-background-dark border border-white/5 rounded-2xl text-xl font-black text-white focus:border-primary transition-all px-4"
               />
             </div>
             <div className="space-y-2">
               <label className="text-[10px] font-black uppercase tracking-widest text-danger">Stop Loss</label>
-              <input 
-                type="number" 
+              <input
+                type="number"
                 value={stopLoss}
                 onChange={(e) => setStopLoss(e.target.value)}
-                placeholder="0.00" 
-                className="w-full h-14 bg-background-dark border border-white/5 rounded-2xl text-xl font-black text-white focus:border-danger transition-all px-4" 
+                placeholder="0.00"
+                className="w-full h-14 bg-background-dark border border-white/5 rounded-2xl text-xl font-black text-white focus:border-danger transition-all px-4"
               />
             </div>
             <div className="space-y-2">
               <label className="text-[10px] font-black uppercase tracking-widest text-success">Take Profit</label>
-              <input 
-                type="number" 
+              <input
+                type="number"
                 value={takeProfit}
                 onChange={(e) => setTakeProfit(e.target.value)}
-                placeholder="0.00" 
-                className="w-full h-14 bg-background-dark border border-white/5 rounded-2xl text-xl font-black text-white focus:border-success transition-all px-4" 
+                placeholder="0.00"
+                className="w-full h-14 bg-background-dark border border-white/5 rounded-2xl text-xl font-black text-white focus:border-success transition-all px-4"
               />
             </div>
           </div>
@@ -198,7 +198,7 @@ const NewTradePage: React.FC = () => {
                 { id: 'revenge', label: 'Revenge', icon: 'swords', color: 'danger' },
                 { id: 'bored', label: 'Tédio', icon: 'bedtime', color: 'primary' },
               ].map(em => (
-                <button 
+                <button
                   key={em.id}
                   onClick={() => setEmotion(em.id)}
                   className={`flex flex-col items-center justify-center p-4 rounded-2xl border transition-all duration-300 ${emotion === em.id ? 'bg-primary/20 border-primary text-white shadow-xl shadow-primary/5' : 'bg-surface-dark border-white/5 text-text-dim hover:bg-white/10'}`}
@@ -212,10 +212,10 @@ const NewTradePage: React.FC = () => {
 
           <div className="space-y-3">
             <label className="text-xs font-black text-white/50 uppercase tracking-[2px]">Notas de Operação</label>
-            <textarea 
+            <textarea
               value={notes}
               onChange={(e) => setNotes(e.target.value)}
-              placeholder="Por que você entrou nesse trade? Qual o contexto do mercado?" 
+              placeholder="Por que você entrou nesse trade? Qual o contexto do mercado?"
               className="w-full h-44 bg-surface-dark border border-white/5 rounded-2xl focus:border-primary focus:ring-primary text-white text-sm p-6 resize-none font-medium leading-relaxed"
             ></textarea>
           </div>

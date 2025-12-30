@@ -13,40 +13,40 @@ const data = [
 
 const DashboardPage: React.FC = () => {
   // Simulando um score para demonstração da lógica
-  const disciplineScore = 88; 
+  const disciplineScore = 88;
 
   const getDisciplineStatus = (score: number) => {
-    if (score < 30) return { 
-      label: 'Indisciplinado', 
-      color: 'text-danger', 
-      bg: 'bg-danger/10', 
+    if (score < 30) return {
+      label: 'Indisciplinado',
+      color: 'text-danger',
+      bg: 'bg-danger/10',
       border: 'border-danger/20',
       icon: 'report_problem',
-      desc: 'Risco crítico de capital. Pare de operar e revise seu plano imediatamente.' 
+      desc: 'Risco crítico de capital. Pare de operar e revise seu plano imediatamente.'
     };
-    if (score < 70) return { 
-      label: 'Em Evolução', 
-      color: 'text-amber-500', 
-      bg: 'bg-amber-500/10', 
+    if (score < 70) return {
+      label: 'Em Evolução',
+      color: 'text-amber-500',
+      bg: 'bg-amber-500/10',
       border: 'border-amber-500/20',
       icon: 'trending_up',
-      desc: 'Progresso constante. Mantenha o foco na execução técnica.' 
+      desc: 'Progresso constante. Mantenha o foco na execução técnica.'
     };
-    if (score < 95) return { 
-      label: 'Consistente', 
-      color: 'text-primary', 
-      bg: 'bg-primary/10', 
+    if (score < 95) return {
+      label: 'Consistente',
+      color: 'text-primary',
+      bg: 'bg-primary/10',
       border: 'border-primary/20',
       icon: 'verified',
-      desc: 'Execução de alto nível. Você está operando como um profissional.' 
+      desc: 'Execução de alto nível. Você está operando como um profissional.'
     };
-    return { 
-      label: 'Trader de Elite', 
-      color: 'text-success', 
-      bg: 'bg-success/10', 
+    return {
+      label: 'Trader de Elite',
+      color: 'text-success',
+      bg: 'bg-success/10',
       border: 'border-success/30',
       icon: 'emoji_events',
-      desc: 'Desempenho excepcional. Disciplina inabalável e maestria emocional.' 
+      desc: 'Desempenho excepcional. Disciplina inabalável e maestria emocional.'
     };
   };
 
@@ -58,7 +58,7 @@ const DashboardPage: React.FC = () => {
         <div>
           <h1 className="text-5xl font-black text-white font-display tracking-tight leading-none uppercase">Desempenho <span className="text-primary italic">Ao Vivo</span></h1>
           <p className="text-text-dim mt-4 text-lg font-medium flex items-center gap-2">
-            24 de Outubro, 2023 
+            24 de Outubro, 2023
             <span className="px-3 py-1 bg-success/10 text-success text-xs font-black rounded-full border border-success/20 uppercase tracking-widest">Mercado Aberto</span>
           </p>
         </div>
@@ -121,13 +121,13 @@ const DashboardPage: React.FC = () => {
                 <AreaChart data={data}>
                   <defs>
                     <linearGradient id="colorValue" x1="0" y1="0" x2="0" y2="1">
-                      <stop offset="5%" stopColor="#0db9f2" stopOpacity={0.4}/>
-                      <stop offset="95%" stopColor="#0db9f2" stopOpacity={0}/>
+                      <stop offset="5%" stopColor="#0db9f2" stopOpacity={0.4} />
+                      <stop offset="95%" stopColor="#0db9f2" stopOpacity={0} />
                     </linearGradient>
                   </defs>
                   <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#1a2428" />
                   <XAxis dataKey="name" stroke="#94a3b8" fontSize={12} tickLine={false} axisLine={false} dy={10} />
-                  <Tooltip 
+                  <Tooltip
                     contentStyle={{ backgroundColor: '#121a1d', border: '1px solid rgba(255,255,255,0.1)', borderRadius: '16px', boxShadow: '0 10px 25px rgba(0,0,0,0.5)' }}
                     itemStyle={{ color: '#0db9f2', fontWeight: 'bold' }}
                   />
@@ -162,7 +162,7 @@ const DashboardPage: React.FC = () => {
                           </div>
                           <div>
                             <span className="font-black text-white block">{trade.symbol}</span>
-                            <span className="text-[10px] text-text-dim uppercase font-bold">{trade.assetClass}</span>
+                            <span className="text-[10px] text-text-dim uppercase font-bold">{trade.asset_class}</span>
                           </div>
                         </div>
                       </td>
@@ -195,7 +195,7 @@ const DashboardPage: React.FC = () => {
           <div className={`p-10 rounded-3xl bg-surface-dark border ${status.border} relative overflow-hidden group transition-all duration-500`}>
             {disciplineScore >= 95 && (
               <div className="absolute top-0 right-0 p-8 opacity-20 group-hover:opacity-40 transition-opacity scale-[2] rotate-12">
-                 <span className="material-symbols-outlined text-[100px] text-success fill">emoji_events</span>
+                <span className="material-symbols-outlined text-[100px] text-success fill">emoji_events</span>
               </div>
             )}
             <div className="flex items-center gap-3 mb-2">
@@ -205,7 +205,7 @@ const DashboardPage: React.FC = () => {
             <div className={`inline-block px-3 py-1 rounded-full ${status.bg} ${status.color} text-[10px] font-black uppercase tracking-[2px] mb-8 border ${status.border}`}>
               {status.label}
             </div>
-            
+
             <div className="flex flex-col items-center justify-center mb-10">
               <div className="size-48 relative flex items-center justify-center">
                 <svg className="size-full -rotate-90" viewBox="0 0 36 36">
@@ -242,23 +242,21 @@ const DashboardPage: React.FC = () => {
               <h3 className="text-2xl font-black text-white font-display">Gatilhos Mentais</h3>
               <span className="px-3 py-1 bg-danger/20 text-danger text-[10px] font-black rounded-full uppercase border border-danger/30">2 Alertas</span>
             </div>
-            
+
             <div className="space-y-4">
               {[
                 { title: 'Risco de Overtrading', desc: 'Você abriu 3 ordens em 15 min. Respire.', icon: 'warning', color: 'danger' },
                 { title: 'Foco no Plano', desc: 'Stop Loss respeitado perfeitamente na última operação.', icon: 'lightbulb', color: 'success' },
                 { title: 'Atenção ao FOMO', desc: 'Detectamos entradas próximas a topos históricos.', icon: 'bolt', color: 'primary' },
               ].map((alert, i) => (
-                <div key={i} className={`p-6 rounded-2xl flex gap-4 border transition-all duration-300 hover:scale-[1.02] ${
-                  alert.color === 'danger' ? 'bg-danger/5 border-danger/20' :
-                  alert.color === 'success' ? 'bg-success/5 border-success/20' :
-                  'bg-primary/5 border-primary/20'
-                }`}>
-                  <span className={`material-symbols-outlined text-[24px] ${
-                    alert.color === 'danger' ? 'text-danger' :
-                    alert.color === 'success' ? 'text-success' :
-                    'text-primary'
-                  }`}>{alert.icon}</span>
+                <div key={i} className={`p-6 rounded-2xl flex gap-4 border transition-all duration-300 hover:scale-[1.02] ${alert.color === 'danger' ? 'bg-danger/5 border-danger/20' :
+                    alert.color === 'success' ? 'bg-success/5 border-success/20' :
+                      'bg-primary/5 border-primary/20'
+                  }`}>
+                  <span className={`material-symbols-outlined text-[24px] ${alert.color === 'danger' ? 'text-danger' :
+                      alert.color === 'success' ? 'text-success' :
+                        'text-primary'
+                    }`}>{alert.icon}</span>
                   <div>
                     <p className="text-sm font-black text-white uppercase tracking-tight">{alert.title}</p>
                     <p className="text-xs text-text-dim mt-2 leading-relaxed">{alert.desc}</p>

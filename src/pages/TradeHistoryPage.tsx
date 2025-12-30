@@ -124,7 +124,7 @@ const TradeHistoryPage: React.FC = () => {
             time,
             exitTime,
             result: netPL > 0 ? TradeResult.WIN : netPL < 0 ? TradeResult.LOSS : TradeResult.OPEN,
-            assetClass: symbol.length <= 6 ? 'FUT' : 'STK',
+            asset_class: symbol.length <= 6 ? 'FUT' : 'STK',
             emotionPre: 'Neutro',
             timeframe: '5m',
           };
@@ -312,7 +312,7 @@ const TradeHistoryPage: React.FC = () => {
                     </td>
                     <td className="px-6 py-5">
                       <div className="flex items-center gap-3">
-                        <div className={`size-8 rounded flex items-center justify-center font-black text-xs ${trade.assetClass === 'FUT' ? 'bg-primary/20 text-primary' : trade.assetClass === 'STK' ? 'bg-success/20 text-success' : 'bg-white/10'}`}>
+                        <div className={`size-8 rounded flex items-center justify-center font-black text-xs ${trade.asset_class === 'FUT' ? 'bg-primary/20 text-primary' : trade.asset_class === 'STK' ? 'bg-success/20 text-success' : 'bg-white/10'}`}>
                           {trade.symbol?.[0] || '?'}
                         </div>
                         <span className="text-sm font-black text-white">{trade.symbol || 'N/A'}</span>

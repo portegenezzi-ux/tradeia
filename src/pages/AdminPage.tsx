@@ -139,7 +139,7 @@ const AdminPage: React.FC = () => {
           date,
           time,
           timeframe: row.Timeframe || '5m',
-          assetClass: symbol.startsWith('WIN') || symbol.startsWith('WDO') ? 'FUT' : 'STK',
+          asset_class: symbol.startsWith('WIN') || symbol.startsWith('WDO') ? 'FUT' : 'STK',
           emotionPre: 'Neutro',
           setup: row.Setup || 'Importado'
         };
