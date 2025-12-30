@@ -1,5 +1,5 @@
 
-import React, { useState, createContext, useContext } from 'react';
+import React, { useState, createContext } from 'react';
 import { HashRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
 import LoginPage from './pages/LoginPage';
 import DashboardPage from './pages/DashboardPage';
@@ -10,7 +10,7 @@ import ProfilePage from './pages/ProfilePage';
 import RealTimeFlowPage from './pages/RealTimeFlowPage';
 import AdminPage from './pages/AdminPage';
 import PsychologistPage from './pages/PsychologistPage';
-import SettingsPage from './pages/SettingsPage'; // Nova página
+import SettingsPage from './pages/SettingsPage';
 import Sidebar from './components/Sidebar';
 import Header from './components/Header';
 
@@ -27,42 +27,6 @@ export const DataContext = createContext<{
   setExcelData: () => { },
 });
 
-const handleLogout = () => {
-  localStorage.removeItem('fluxo_user');
-  setUser(null);
-};
-
-if (!user) {
-  return <LoginPage onLogin={handleLogin} />;
-}
-
-return (
-  <DataContext.Provider value={{ excelData, setExcelData }}>
-    <Router>
-      <Routes>
-        <Route path="/" element={<Layout user={user} onLogout={handleLogout}><DashboardPage /></Layout>} />
-        <Route path="/flow" element={<Layout user={user} onLogout={handleLogout}><RealTimeFlowPage /></Layout>} />
-        <Route path="/journal" element={<Layout user={user} onLogout={handleLogout}><TradeHistoryPage /></Layout>} />
-        <Route path="/new-trade" element={<Layout user={user} onLogout={handleLogout}><NewTradePage /></Layout>} />
-        <Route path="/trade/:id" element={<Layout user={user} onLogout={handleLogout}><TradeDetailPage /></Layout>} />
-        <Route path="/profile" element={<Layout user={user} onLogout={handleLogout}><ProfilePage /></Layout>} />
-        <Route path="/psychologist" element={<Layout user={user} onLogout={handleLogout}><PsychologistPage /></Layout>} />
-        <Route path="/settings" element={<Layout user={user} onLogout={handleLogout}><SettingsPage /></Layout>} />
-        <Route
-          path="/admin"
-          element={
-            user.role === 'admin'
-              ? <Layout user={user} onLogout={handleLogout}><AdminPage /></Layout>
-              : <Navigate to="/" />
-          }
-        />
-        <Route path="*" element={<Navigate to="/" />} />
-      </Routes>
-    </Router>
-  </DataContext.Provider>
-);
-};
-
 const Layout: React.FC<{ children: React.ReactNode, user: User, onLogout: () => void }> = ({ children, user, onLogout }) => {
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
 
@@ -78,6 +42,56 @@ const Layout: React.FC<{ children: React.ReactNode, user: User, onLogout: () => 
         </main>
       </div>
     </div>
+  );
+};
+
+const App: React.FC = () => {
+  const [user, setUser] = useState<User | null>(() => {
+    const saved = localStorage.getItem('fluxo_user');
+    return saved ? JSON.parse(saved) : null;
+  });
+  const [excelData, setExcelData] = useState<any[]>([]);
+
+  const handleLogin = (username: string) => {
+    const role = username.toLowerCase() === 'admin' ? 'admin' : 'user';
+    const newUser: User = { username, role };
+    setUser(newUser);
+    localStorage.setItem('fluxo_user', JSON.stringify(newUser));
+  };
+
+  const handleLogout = () => {
+    localStorage.removeItem('fluxo_user');
+    setUser(null);
+  };
+
+  if (!user) {
+    return <LoginPage onLogin={handleLogin} />;
+  }
+
+  return (
+    <DataContext.Provider value={{ excelData, setExcelData }}>
+      <Router>
+        <Routes>
+          <Route path="/" element={<Layout user={user} onLogout={handleLogout}><DashboardPage /></Layout>} />
+          <Route path="/flow" element={<Layout user={user} onLogout={handleLogout}><RealTimeFlowPage /></Layout>} />
+          <Route path="/journal" element={<Layout user={user} onLogout={handleLogout}><TradeHistoryPage /></Layout>} />
+          <Route path="/new-trade" element={<Layout user={user} onLogout={handleLogout}><NewTradePage /></Layout>} />
+          <Route path="/trade/:id" element={<Layout user={user} onLogout={handleLogout}><TradeDetailPage /></Layout>} />
+          <Route path="/profile" element={<Layout user={user} onLogout={handleLogout}><ProfilePage /></Layout>} />
+          <Route path="/psychologist" element={<Layout user={user} onLogout={handleLogout}><PsychologistPage /></Layout>} />
+          <Route path="/settings" element={<Layout user={user} onLogout={handleLogout}><SettingsPage /></Layout>} />
+          <Route
+            path="/admin"
+            element={
+              user.role === 'admin'
+                ? <Layout user={user} onLogout={handleLogout}><AdminPage /></Layout>
+                : <Navigate to="/" />
+            }
+          />
+          <Route path="*" element={<Navigate to="/" />} />
+        </Routes>
+      </Router>
+    </DataContext.Provider>
   );
 };
 
