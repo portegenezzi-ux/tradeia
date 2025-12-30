@@ -7,9 +7,10 @@ interface SidebarProps {
   isOpen: boolean;
   onClose: () => void;
   userRole: 'admin' | 'user';
+  onLogout: () => void;
 }
 
-const Sidebar: React.FC<SidebarProps> = ({ isOpen, onClose, userRole }) => {
+const Sidebar: React.FC<SidebarProps> = ({ isOpen, onClose, userRole, onLogout }) => {
   const [profileImage, setProfileImage] = useState<string>('https://picsum.photos/id/64/100/100');
   const [userName, setUserName] = useState<string>(userRole === 'admin' ? 'Admin' : 'Carlos Silva');
 
@@ -24,7 +25,7 @@ const Sidebar: React.FC<SidebarProps> = ({ isOpen, onClose, userRole }) => {
     updateProfile();
     window.addEventListener('profile_updated', updateProfile);
     window.addEventListener('profile_image_updated', updateProfile);
-    
+
     return () => {
       window.removeEventListener('profile_updated', updateProfile);
       window.removeEventListener('profile_image_updated', updateProfile);
@@ -37,12 +38,12 @@ const Sidebar: React.FC<SidebarProps> = ({ isOpen, onClose, userRole }) => {
   return (
     <>
       {isOpen && (
-        <div 
-          className="fixed inset-0 bg-black/60 backdrop-blur-sm z-40 lg:hidden transition-opacity duration-300" 
+        <div
+          className="fixed inset-0 bg-black/60 backdrop-blur-sm z-40 lg:hidden transition-opacity duration-300"
           onClick={onClose}
         />
       )}
-      
+
       <aside className={`
         fixed inset-y-0 left-0 w-72 glass border-r border-white/5 z-50 transition-all duration-500 ease-in-out lg:relative lg:translate-x-0
         ${isOpen ? 'translate-x-0' : '-translate-x-full'}
@@ -63,8 +64,8 @@ const Sidebar: React.FC<SidebarProps> = ({ isOpen, onClose, userRole }) => {
                 onClick={() => onClose()}
                 className={({ isActive }) => `
                   group flex items-center justify-between px-5 py-4 rounded-2xl transition-all duration-300
-                  ${isActive 
-                    ? 'bg-primary text-background-dark font-black shadow-lg shadow-primary/20 scale-[1.02]' 
+                  ${isActive
+                    ? 'bg-primary text-background-dark font-black shadow-lg shadow-primary/20 scale-[1.02]'
                     : 'text-text-dim hover:bg-white/5 hover:text-white'}
                 `}
               >
@@ -90,9 +91,9 @@ const Sidebar: React.FC<SidebarProps> = ({ isOpen, onClose, userRole }) => {
           <div className="mt-auto pt-8 border-t border-white/5">
             <div className="flex items-center gap-4 p-4 rounded-2xl bg-white/5 border border-white/5 group hover:border-primary/30 transition-all duration-300 cursor-pointer">
               <div className="relative">
-                <div 
-                  className="size-12 rounded-2xl bg-cover bg-center ring-2 ring-primary/20 group-hover:ring-primary/50 transition-all" 
-                  style={{ backgroundImage: `url(${profileImage})` }} 
+                <div
+                  className="size-12 rounded-2xl bg-cover bg-center ring-2 ring-primary/20 group-hover:ring-primary/50 transition-all"
+                  style={{ backgroundImage: `url(${profileImage})` }}
                 />
                 <div className="absolute -bottom-1 -right-1 size-4 bg-success border-2 border-background-dark rounded-full shadow-lg"></div>
               </div>
@@ -101,8 +102,8 @@ const Sidebar: React.FC<SidebarProps> = ({ isOpen, onClose, userRole }) => {
                 <p className="text-[10px] text-primary uppercase font-black tracking-tighter">{userRole === 'admin' ? 'System Operator' : 'Pro Strategist'}</p>
               </div>
             </div>
-            
-            <button 
+
+            <button
               onClick={() => window.location.reload()}
               className="flex items-center gap-4 w-full px-5 py-4 mt-6 text-text-dim hover:text-danger transition-colors font-bold text-sm"
             >

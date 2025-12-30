@@ -25,7 +25,14 @@ export default async function handler(req: Request) {
         // Initialize Supabase on the Edge
         const supabaseUrl = process.env.SUPABASE_URL || process.env.VITE_SUPABASE_URL;
         const supabaseKey = process.env.SUPABASE_ANON_KEY || process.env.VITE_SUPABASE_ANON_KEY;
-        const supabase = createClient(supabaseUrl!, supabaseKey!);
+
+        if (!supabaseUrl || !supabaseKey) {
+            return new Response(JSON.stringify({
+                error: 'Faltam chaves de bootstrap do Supabase na Vercel (SUPABASE_URL e SUPABASE_ANON_KEY).'
+            }), { status: 500 });
+        }
+
+        const supabase = createClient(supabaseUrl, supabaseKey);
 
         // Fetch keys from DB
         const dbApiKey = await getSetting(supabase, 'GEMINI_API_KEY');
