@@ -48,7 +48,7 @@ const PsychologistPage: React.FC = () => {
     "Sinto que estou operando por tédio",
     "Acabei de levar um stop e quero recuperar",
     "Estou com medo de entrar no trade",
-    "Minha meta do dia foi batida, devo parar?"
+    "Levei stop no FOMO novamente"
   ];
 
   return (

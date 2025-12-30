@@ -18,6 +18,7 @@ const TradeDetailPage: React.FC = () => {
   // Estados de edição
   const [isEditing, setIsEditing] = useState(false);
   const [editExitPrice, setEditExitPrice] = useState<string>('');
+  const [editEmotion, setEditEmotion] = useState<string>('Neutro');
   const [isSaving, setIsSaving] = useState(false);
 
   useEffect(() => {
@@ -53,6 +54,7 @@ const TradeDetailPage: React.FC = () => {
       } else {
         setTrade(data);
         setEditExitPrice(data.exitPrice?.toString() || '');
+        setEditEmotion(data.emotion_pre || 'Neutro');
       }
     } catch (err) {
       console.error('Erro ao buscar detalhe do trade:', err);
@@ -60,6 +62,7 @@ const TradeDetailPage: React.FC = () => {
       if (mockTrade) {
         setTrade(mockTrade);
         setEditExitPrice(mockTrade.exitPrice?.toString() || '');
+        setEditEmotion(mockTrade.emotion_pre || 'Neutro');
       }
     } finally {
       setIsLoading(false);
@@ -113,7 +116,8 @@ const TradeDetailPage: React.FC = () => {
         .update({
           exitPrice: newExit,
           netPL: newPL,
-          result: newResult
+          result: newResult,
+          emotion_pre: editEmotion
         })
         .eq('id', id);
 
@@ -123,7 +127,8 @@ const TradeDetailPage: React.FC = () => {
         ...trade,
         exitPrice: newExit,
         netPL: newPL,
-        result: newResult
+        result: newResult,
+        emotion_pre: editEmotion
       });
       setIsEditing(false);
     } catch (err) {
@@ -313,11 +318,22 @@ const TradeDetailPage: React.FC = () => {
 
               <div className="space-y-1">
                 <p className="text-[9px] font-black text-text-dim uppercase tracking-widest">Emoção</p>
-                <div className="flex items-center gap-2">
-                  <span className="material-symbols-outlined text-primary text-[16px] fill">sentiment_satisfied</span>
-                  <p className="text-sm font-bold text-white uppercase">{trade.emotion_pre
-                  }</p>
-                </div>
+                {isEditing ? (
+                  <select
+                    value={editEmotion}
+                    onChange={(e) => setEditEmotion(e.target.value)}
+                    className="w-full bg-background-dark border border-primary/40 rounded-xl px-2 py-1 text-xs font-bold text-white outline-none"
+                  >
+                    {['Neutro', 'Confiante', 'Ansioso', 'FOMO', 'Revenge', 'Calmo'].map(e => (
+                      <option key={e} value={e}>{e}</option>
+                    ))}
+                  </select>
+                ) : (
+                  <div className="flex items-center gap-2">
+                    <span className="material-symbols-outlined text-primary text-[16px] fill">sentiment_satisfied</span>
+                    <p className="text-sm font-bold text-white uppercase">{trade.emotion_pre}</p>
+                  </div>
+                )}
               </div>
             </div>
           </div>
