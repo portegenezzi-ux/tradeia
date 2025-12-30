@@ -24,7 +24,7 @@ export const DataContext = createContext<{
   setExcelData: (data: any[]) => void;
 }>({
   excelData: [],
-  setExcelData: () => {},
+  setExcelData: () => { },
 });
 
 const Layout: React.FC<{ children: React.ReactNode, user: User }> = ({ children, user }) => {
@@ -46,12 +46,17 @@ const Layout: React.FC<{ children: React.ReactNode, user: User }> = ({ children,
 };
 
 const App: React.FC = () => {
-  const [user, setUser] = useState<User | null>(null);
+  const [user, setUser] = useState<User | null>(() => {
+    const saved = localStorage.getItem('fluxo_user');
+    return saved ? JSON.parse(saved) : null;
+  });
   const [excelData, setExcelData] = useState<any[]>([]);
 
   const handleLogin = (username: string) => {
     const role = username.toLowerCase() === 'admin' ? 'admin' : 'user';
-    setUser({ username, role });
+    const newUser: User = { username, role };
+    setUser(newUser);
+    localStorage.setItem('fluxo_user', JSON.stringify(newUser));
   };
 
   if (!user) {
@@ -70,13 +75,13 @@ const App: React.FC = () => {
           <Route path="/profile" element={<Layout user={user}><ProfilePage /></Layout>} />
           <Route path="/psychologist" element={<Layout user={user}><PsychologistPage /></Layout>} />
           <Route path="/settings" element={<Layout user={user}><SettingsPage /></Layout>} />
-          <Route 
-            path="/admin" 
+          <Route
+            path="/admin"
             element={
-              user.role === 'admin' 
-                ? <Layout user={user}><AdminPage /></Layout> 
+              user.role === 'admin'
+                ? <Layout user={user}><AdminPage /></Layout>
                 : <Navigate to="/" />
-            } 
+            }
           />
           <Route path="*" element={<Navigate to="/" />} />
         </Routes>

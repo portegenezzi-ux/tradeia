@@ -1,4 +1,4 @@
-import { GoogleGenAI } from "@google/genai";
+import { GoogleGenerativeAI } from "@google/generative-ai";
 import { createClient } from '@supabase/supabase-js';
 
 export const config = {
@@ -35,7 +35,7 @@ export default async function handler(req: Request) {
             return new Response(JSON.stringify({ error: 'Gemini API Key not configured on server or database' }), { status: 500 });
         }
 
-        const genAI = new GoogleGenAI(apiKey);
+        const genAI = new GoogleGenerativeAI(apiKey);
         const model = genAI.getGenerativeModel({ model: "gemini-1.5-flash" });
 
         const result = await model.generateContent(prompt);
