@@ -56,6 +56,7 @@ const TradeHistoryPage: React.FC = () => {
     if (!file) return;
 
     setIsLoading(true);
+    console.log('--- Iniciando Importação Profit v2.1 (Schema: asset_class) ---');
     const reader = new FileReader();
     reader.onload = async (evt) => {
       try {
